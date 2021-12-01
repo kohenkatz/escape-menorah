@@ -1,7 +1,6 @@
 #define EI_ARDUINO_INTERRUPTED_PIN
 #include <EnableInterrupt.h>
 
-volatile uint8_t externalInterruptFlag = 0;
 volatile uint8_t pinChangeInterruptFlag = 0;
 
 #define MAGNET_1 10
@@ -11,6 +10,8 @@ volatile uint8_t pinChangeInterruptFlag = 0;
 #define MAGNET_5 14
 #define MAGNET_6 15
 #define MAGNET_7 53
+#define BTN_ALL_ON 51
+#define BTN_OPEN_DOOR 50
 
 #define OIL_1 36
 #define OIL_2 35
@@ -26,6 +27,7 @@ volatile uint8_t pinChangeInterruptFlag = 0;
 #define FLAME_5 25
 #define FLAME_6 26
 #define FLAME_7 27
+#define DOOR 29
 
 int oil1 = 0;
 int oil2 = 0;
@@ -44,6 +46,10 @@ int flame6 = 0;
 int flame7 = 0;
 int flameCount = 0;
 
+int forceAllOn = 0;
+int openDoor = 0;
+int doorWasOpened = 0;
+
 void interruptFunction () {
   pinChangeInterruptFlag = arduinoInterruptedPin;
   switch (arduinoInterruptedPin) {
@@ -54,11 +60,9 @@ void interruptFunction () {
     case MAGNET_5: if (oilCount == 7) flame5 = 1; else oil5 = 1; break;
     case MAGNET_6: if (oilCount == 7) flame6 = 1; else oil6 = 1; break;
     case MAGNET_7: if (oilCount == 7) flame7 = 1; else oil7 = 1; break;
+    case BTN_ALL_ON: forceAllOn = 1; break;
+    case BTN_OPEN_DOOR: openDoor = 1; doorWasOpened = 0; break;
   }
-}
-
-void interruptExFunction () {
-  externalInterruptFlag = arduinoInterruptedPin;
 }
 
 #define setupPCInterrupt(x) \
@@ -74,13 +78,6 @@ void interruptExFunction () {
   EI_printPSTR("\r\n"); \
   pinMode( x, INPUT_PULLUP); \
   enableInterrupt( x, interruptFunction, CHANGE)
-
-#define setupExInterrupt(x) \
-  EI_printPSTR("Add External pin: "); \
-  EI_printPSTR(#x); \
-  EI_printPSTR("\r\n"); \
-  pinMode( x, INPUT_PULLUP); \
-  enableInterrupt( x , interruptExFunction, CHANGE)
 
 void printIt(char *pinNumber, uint8_t count) {
   EI_printPSTR(" Pin ");
@@ -110,6 +107,53 @@ void printValues() {
   Serial.println();
 }
 
+void allOn() {
+  oil1 = 1;
+  oil2 = 1;
+  oil3 = 1;
+  oil4 = 1;
+  oil5 = 1;
+  oil6 = 1;
+  oil7 = 1;
+  flame1 = 1;
+  flame2 = 1;
+  flame3 = 1;
+  flame4 = 1;
+  flame5 = 1;
+  flame6 = 1;
+  flame7 = 1;
+  oilCount = 7;
+  flameCount =7;
+  
+  digitalWrite(OIL_1, LOW);
+  delay(500);
+  digitalWrite(OIL_2, LOW);
+  delay(500);
+  digitalWrite(OIL_3, LOW);
+  delay(500);
+  digitalWrite(OIL_4, LOW);
+  delay(500);
+  digitalWrite(OIL_5, LOW);
+  delay(500);
+  digitalWrite(OIL_6, LOW);
+  delay(500);
+  digitalWrite(OIL_7, LOW);
+  delay(500);
+  digitalWrite(FLAME_1, LOW);
+  delay(500);
+  digitalWrite(FLAME_2, LOW);
+  delay(500);
+  digitalWrite(FLAME_3, LOW);
+  delay(500);
+  digitalWrite(FLAME_4, LOW);
+  delay(500);
+  digitalWrite(FLAME_5, LOW);
+  delay(500);
+  digitalWrite(FLAME_6, LOW);
+  delay(500);
+  digitalWrite(FLAME_7, LOW);
+}
+
 void resetOutputs() {
   oil1 = 0;
   oil2 = 0;
@@ -128,6 +172,9 @@ void resetOutputs() {
   oilCount = 0;
   flameCount = 0;
 
+  openDoor = 0;
+  doorWasOpened = 0;
+  
   digitalWrite(OIL_1, HIGH);
   digitalWrite(OIL_2, HIGH);
   digitalWrite(OIL_3, HIGH);
@@ -142,6 +189,7 @@ void resetOutputs() {
   digitalWrite(FLAME_5, HIGH);
   digitalWrite(FLAME_6, HIGH);
   digitalWrite(FLAME_7, HIGH);
+  digitalWrite(DOOR, HIGH);
 }
 
 void setup() {
@@ -172,6 +220,7 @@ void setup() {
   pinMode(FLAME_5, OUTPUT);
   pinMode(FLAME_6, OUTPUT);
   pinMode(FLAME_7, OUTPUT);
+  pinMode(DOOR, OUTPUT);
 
   resetOutputs();
   printValues();
@@ -188,6 +237,20 @@ void loop() {
     arduinoInterruptedPin = 0;
     pinChangeInterruptFlag = 0;
     printValues();
+
+    if (openDoor == 1 && doorWasOpened == 0) {
+      doorWasOpened = 1;
+      openDoor = 0;
+      digitalWrite(DOOR, LOW);
+      delay(1000);
+      digitalWrite(DOOR, HIGH);
+    }
+
+    if (forceAllOn > 0) {
+      forceAllOn = 0;
+      allOn();
+      return;
+    }
 
     if (oil1 > 0) {
       digitalWrite(OIL_1, LOW);
@@ -233,13 +296,6 @@ void loop() {
     }
     oilCount = oil1 + oil2 + oil3 + oil4 + oil5 + oil6 + oil7;
     flameCount = flame1 + flame2 + flame3 + flame4 + flame5 + flame6 + flame7;
-  }
-  if (externalInterruptFlag) {
-    //EI_printPSTR("External interrupt, pin "); Serial.println(arduinoInterruptedPin);
-    EI_printPSTR("ext: "); Serial.print(externalInterruptFlag);
-    EI_printPSTR(", state: "); Serial.println(arduinoPinState);
-    arduinoInterruptedPin = 0;
-    externalInterruptFlag = 0;
   }
 
   if (Serial.available()) {
