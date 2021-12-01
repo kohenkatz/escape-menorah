@@ -299,6 +299,15 @@ void loop() {
       openDoor();
       delay(5000);
       // For some reason turning off the door is causing phantom inrush
+      // on the hall effect sensors.
+      // We do need to find a fix for this, but for now we just reset everything.
+      flame1 = 0;
+      flame2 = 0;
+      flame3 = 0;
+      flame4 = 0;
+      flame5 = 0;
+      flame6 = 0;
+      flame7 = 0;
     }
   }
 
