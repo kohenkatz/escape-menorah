@@ -69,26 +69,12 @@ void interruptFunction () {
   }
 }
 
-#define setupPCInterrupt(x) \
-  EI_printPSTR("Add PinChange pin: "); \
-  EI_printPSTR(#x); \
-  EI_printPSTR("\r\n"); \
-  pinMode( x, INPUT_PULLUP); \
-  enableInterrupt( x | PINCHANGEINTERRUPT, interruptFunction, CHANGE)
-
 #define setupInterrupt(x) \
   EI_printPSTR("Add pin: "); \
   EI_printPSTR(#x); \
   EI_printPSTR("\r\n"); \
   pinMode( x, INPUT_PULLUP); \
   enableInterrupt( x, interruptFunction, CHANGE)
-
-void printIt(char *pinNumber, uint8_t count) {
-  EI_printPSTR(" Pin ");
-  Serial.print(pinNumber);
-  EI_printPSTR(" was interrupted: ");
-  Serial.println(count, DEC);
-}
 
 void printValues() {
   Serial.print("OIL:   ");
