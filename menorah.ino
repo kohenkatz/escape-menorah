@@ -3,6 +3,7 @@
 
 volatile uint8_t pinChangeInterruptFlag = 0;
 
+// Sensors and buttons
 #define MAGNET_1 10
 #define MAGNET_2 11
 #define MAGNET_3 12
@@ -13,6 +14,7 @@ volatile uint8_t pinChangeInterruptFlag = 0;
 #define BTN_ALL_ON 51
 #define BTN_OPEN_DOOR 50
 
+// Outputs
 #define OIL_1 36
 #define OIL_2 35
 #define OIL_3 34
@@ -29,26 +31,28 @@ volatile uint8_t pinChangeInterruptFlag = 0;
 #define FLAME_7 27
 #define DOOR 29
 
-int oil1 = 0;
-int oil2 = 0;
-int oil3 = 0;
-int oil4 = 0;
-int oil5 = 0;
-int oil6 = 0;
-int oil7 = 0;
+// Status
+volatile int oil1 = 0;
+volatile int oil2 = 0;
+volatile int oil3 = 0;
+volatile int oil4 = 0;
+volatile int oil5 = 0;
+volatile int oil6 = 0;
+volatile int oil7 = 0;
 int oilCount = 0;
-int flame1 = 0;
-int flame2 = 0;
-int flame3 = 0;
-int flame4 = 0;
-int flame5 = 0;
-int flame6 = 0;
-int flame7 = 0;
+volatile int flame1 = 0;
+volatile int flame2 = 0;
+volatile int flame3 = 0;
+volatile int flame4 = 0;
+volatile int flame5 = 0;
+volatile int flame6 = 0;
+volatile int flame7 = 0;
 int flameCount = 0;
 
-int forceAllOn = 0;
-int openDoor = 0;
-int doorWasOpened = 0;
+volatile int forceAllOn = 0;
+volatile int openDoorManually = 0;
+// Only allow the door to open once to prevent the lock from burning out
+volatile int doorWasOpened = 0;
 
 void interruptFunction () {
   pinChangeInterruptFlag = arduinoInterruptedPin;
@@ -61,7 +65,7 @@ void interruptFunction () {
     case MAGNET_6: if (oilCount == 7) flame6 = 1; else oil6 = 1; break;
     case MAGNET_7: if (oilCount == 7) flame7 = 1; else oil7 = 1; break;
     case BTN_ALL_ON: forceAllOn = 1; break;
-    case BTN_OPEN_DOOR: openDoor = 1; doorWasOpened = 0; break;
+    case BTN_OPEN_DOOR: openDoorManually = 1; doorWasOpened = 0; break;
   }
 }
 
@@ -123,8 +127,8 @@ void allOn() {
   flame6 = 1;
   flame7 = 1;
   oilCount = 7;
-  flameCount =7;
-  
+  flameCount = 7;
+
   digitalWrite(OIL_1, LOW);
   delay(500);
   digitalWrite(OIL_2, LOW);
@@ -172,9 +176,9 @@ void resetOutputs() {
   oilCount = 0;
   flameCount = 0;
 
-  openDoor = 0;
+  openDoorManually = 0;
   doorWasOpened = 0;
-  
+
   digitalWrite(OIL_1, HIGH);
   digitalWrite(OIL_2, HIGH);
   digitalWrite(OIL_3, HIGH);
@@ -226,6 +230,17 @@ void setup() {
   printValues();
 }
 
+void openDoor() {
+  if (doorWasOpened == 1) {
+    return;
+  }
+
+  doorWasOpened = 1;
+  digitalWrite(DOOR, LOW);
+  delay(1000);
+  digitalWrite(DOOR, HIGH);
+}
+
 uint8_t current_pin_state = 0;
 // In the loop, we just check to see where the interrupt count is at. The value gets updated by
 // the interrupt routine.
@@ -238,12 +253,9 @@ void loop() {
     pinChangeInterruptFlag = 0;
     printValues();
 
-    if (openDoor == 1 && doorWasOpened == 0) {
-      doorWasOpened = 1;
-      openDoor = 0;
-      digitalWrite(DOOR, LOW);
-      delay(1000);
-      digitalWrite(DOOR, HIGH);
+    if (openDoorManually == 1) {
+      openDoorManually = 0;
+      openDoor();
     }
 
     if (forceAllOn > 0) {
@@ -296,6 +308,12 @@ void loop() {
     }
     oilCount = oil1 + oil2 + oil3 + oil4 + oil5 + oil6 + oil7;
     flameCount = flame1 + flame2 + flame3 + flame4 + flame5 + flame6 + flame7;
+
+    if (oilCount == 7 && doorWasOpened == 0) {
+      openDoor();
+      delay(5000);
+      // For some reason turning off the door is causing phantom inrush
+    }
   }
 
   if (Serial.available()) {
