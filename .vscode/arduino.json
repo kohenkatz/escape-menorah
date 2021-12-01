@@ -2,5 +2,6 @@
     "sketch": "menorah.ino",
     "configuration": "cpu=atmega2560",
     "board": "arduino:avr:mega",
+    "output": "../ArduinoOutput",
     "port": "COM5"
 }
